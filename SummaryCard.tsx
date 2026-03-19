@@ -16,30 +16,39 @@ interface Summary {
 export default function SummaryCard({ item }: { item: Summary }) {
   const [activeTab, setActiveTab] = useState<'summary' | 'visual' | 'verbatim'>('summary');
 
-  // Robust parsing: Looks for any header level and matches keywords
-  const getSectionContent = (keywords: string[], text: string) => {
-    // Regex matches: # (one or more) + optional space + a line containing one of the keywords
-    // Then captures everything until the next # (header)
-    const keywordsEscaped = keywords.join('|');
-    const regex = new RegExp(`#{1,6}\\s*.*(${keywordsEscaped}).*[\\s\\S]*?(\\n(?=#{1,6}\\s)|$)`, 'i');
-    const match = text.match(regex);
-    
-    if (!match) return null;
-    
-    // Remove the header line from the matched content
-    const fullMatch = match[0];
-    const lines = fullMatch.split('\n');
-    return lines.slice(1).join('\n').trim();
+  const parseSections = (text: string) => {
+    // Add a newline at the start to ensure the first header is caught by the split
+    const normalizedText = '\n' + text;
+    // Split by newline followed by any markdown header
+    const chunks = normalizedText.split(/\n(?=#{1,6}\s)/).filter(c => c.trim() !== '');
+
+    const findContent = (keywords: string[]) => {
+      for (const chunk of chunks) {
+        const firstLine = chunk.trim().split('\n')[0].toLowerCase();
+        if (keywords.some(k => firstLine.includes(k.toLowerCase()))) {
+          const lines = chunk.trim().split('\n');
+          return lines.slice(1).join('\n').trim();
+        }
+      }
+      return null;
+    };
+
+    return {
+      summary: findContent(['themen', 'zusammenfassung', 'summary']) || (chunks[0] ? chunks[0].trim() : 'Keine Themenübersicht verfügbar.'),
+      visual: findContent(['visuell', 'bild', 'visual']) || 'Visuelle Beschreibung nicht verfügbar.',
+      verbatim: findContent(['transkript', 'wörtlich', 'verbatim', 'text', 'sprecher']) || 'Transkript nicht verfügbar.',
+    };
   };
 
-  const sections = {
-    summary: getSectionContent(['themen', 'zusammenfassung'], item.summary) || item.summary.split(/^#+/m)[0].trim() || item.summary,
-    visual: getSectionContent(['visuell', 'bild'], item.summary) || 'Visuelle Beschreibung nicht verfügbar.',
-    verbatim: getSectionContent(['transkript', 'wörtlich', 'text', 'sprecher'], item.summary) || 'Transkript nicht verfügbar.',
-  };
+  const sections = parseSections(item.summary);
 
-  // Safe date parsing to handle UTC
-  const displayDate = item.published_at ? parseISO(item.published_at) : new Date();
+  // Safe date parsing
+  let displayDate = new Date();
+  try {
+    if (item.published_at) {
+      displayDate = parseISO(item.published_at);
+    }
+  } catch (e) {}
 
   return (
     <article className="summary-card animation-fade-in">
@@ -86,7 +95,7 @@ export default function SummaryCard({ item }: { item: Summary }) {
           rel="noopener noreferrer"
           className="btn-link"
         >
-          Original Video ansehen
+          Auf YouTube ansehen
         </a>
       </div>
     </article>
