@@ -13,13 +13,14 @@ interface Summary {
   published_at: string;
 }
 
-export default function SummaryCard({ item }: { item: Summary }) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'visual' | 'verbatim'>('summary');
+type TabType = 'summary' | 'visual' | 'verbatim';
 
-  const parseSections = (text: string) => {
-    // Add a newline at the start to ensure the first header is caught by the split
-    const normalizedText = '\n' + text;
-    // Split by newline followed by any markdown header
+export default function SummaryCard({ item }: { item: Summary }) {
+  const [activeTab, setActiveTab] = useState<TabType>('summary');
+
+  // Robust chunk-based parser
+  const sections = (() => {
+    const normalizedText = '\n' + (item.summary || '');
     const chunks = normalizedText.split(/\n(?=#{1,6}\s)/).filter(c => c.trim() !== '');
 
     const findContent = (keywords: string[]) => {
@@ -38,17 +39,23 @@ export default function SummaryCard({ item }: { item: Summary }) {
       visual: findContent(['visuell', 'bild', 'visual']) || 'Visuelle Beschreibung nicht verfügbar.',
       verbatim: findContent(['transkript', 'wörtlich', 'verbatim', 'text', 'sprecher']) || 'Transkript nicht verfügbar.',
     };
-  };
+  })();
 
-  const sections = parseSections(item.summary);
+  const activeContent = activeTab === 'summary' 
+    ? sections.summary 
+    : activeTab === 'visual' 
+    ? sections.visual 
+    : sections.verbatim;
 
   // Safe date parsing
   let displayDate = new Date();
-  try {
-    if (item.published_at) {
+  if (item.published_at) {
+    try {
       displayDate = parseISO(item.published_at);
+    } catch (e) {
+      console.error(e);
     }
-  } catch (e) {}
+  }
 
   return (
     <article className="summary-card animation-fade-in">
@@ -62,19 +69,19 @@ export default function SummaryCard({ item }: { item: Summary }) {
       <div className="tabs-container">
         <div className="tabs">
           <button 
-            className={activeTab === 'summary' ? 'tab active' : 'tab'} 
+            className={activeTab === 'summary' ? 'tab active transition' : 'tab transition'} 
             onClick={() => setActiveTab('summary')}
           >
             Themen
           </button>
           <button 
-            className={activeTab === 'visual' ? 'tab active' : 'tab'} 
+            className={activeTab === 'visual' ? 'tab active transition' : 'tab transition'} 
             onClick={() => setActiveTab('visual')}
           >
             Visuelles
           </button>
           <button 
-            className={activeTab === 'verbatim' ? 'tab active' : 'tab'} 
+            className={activeTab === 'verbatim' ? 'tab active transition' : 'tab transition'} 
             onClick={() => setActiveTab('verbatim')}
           >
             Transkript
@@ -84,7 +91,7 @@ export default function SummaryCard({ item }: { item: Summary }) {
 
       <div className="card-content">
         <div className="markdown-body">
-          <ReactMarkdown>{sections[activeTab]}</ReactMarkdown>
+          <ReactMarkdown>{activeContent}</ReactMarkdown>
         </div>
       </div>
 
