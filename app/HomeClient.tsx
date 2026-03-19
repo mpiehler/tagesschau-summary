@@ -1,30 +1,23 @@
 // @ts-nocheck
 'use client';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import SummaryCard from './SummaryCard';
 import BackfillTool from './BackfillTool';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 export default function HomeClient({ initialSummaries }) {
-  // Tage extrem robust berechnen
-  const allDays = useMemo(() => {
-    const days = initialSummaries
-      .map(s => (s.published_at ? s.published_at.split('T')[0] : null))
-      .filter(Boolean);
-    return Array.from(new Set(days)).sort().reverse();
-  }, [initialSummaries]);
+  // Tage robuster berechnen
+  const days = Array.from(new Set(initialSummaries.map(s => s.published_at ? s.published_at.substring(0, 10) : null).filter(Boolean)))
+    .sort().reverse();
 
-  // Immer den ersten verfügbaren Tag vorwählen
-  const [selectedDateStr, setSelectedDateStr] = useState(allDays[0] || null);
+  // IMMER den ersten verfügbaren Tag vorwählen
+  const [selectedDay, setSelectedDay] = useState(days[0] || null);
 
-  // Filterung: Wenn ein Tag gewählt ist, zeige nur diesen. Sonst (Archiv) alle.
-  const filtered = selectedDateStr 
-    ? initialSummaries.filter(s => s.published_at && s.published_at.startsWith(selectedDateStr))
+  // Filterung: Wenn ein Tag gewählt ist, zeige nur diesen. Sonst alle.
+  const filtered = selectedDay 
+    ? initialSummaries.filter(s => s.published_at && s.published_at.startsWith(selectedDay))
     : initialSummaries;
-
-  const recentDays = allDays.slice(0, 3);
-  const olderDays = allDays.slice(3);
 
   return (
     <main className="container">
@@ -33,33 +26,24 @@ export default function HomeClient({ initialSummaries }) {
           <span className="logo-emoji">📺</span>
           <h1>Tagesschau Summary</h1>
         </div>
+        <p style={{textAlign: 'center', opacity: 0.8}}>Die tagesaktuelle Zusammenfassung der 20-Uhr-Sendung.</p>
       </header>
 
-      <div className="top-controls">
-        <div className="day-selector">
-          {recentDays.map((dayStr, i) => {
-            const date = parseISO(dayStr);
-            return (
-              <button 
-                key={dayStr} 
-                className={selectedDateStr === dayStr ? 'btn-day active' : 'btn-day'} 
-                onClick={() => setSelectedDateStr(dayStr)}
-              >
-                {i === 0 ? 'Aktuell' : format(date, 'eeee', { locale: de })}
-              </button>
-            );
-          })}
-          
-          {olderDays.length > 0 && (
-            <select 
-              className="btn-day select-day" 
-              value={selectedDateStr || ''} 
-              onChange={(e) => setSelectedDateStr(e.target.value || null)}
+      <div className="top-controls" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', marginBottom: '40px'}}>
+        <div className="day-selector" style={{display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center'}}>
+          {days.slice(0, 3).map((d, i) => (
+            <button 
+              key={d} 
+              className={selectedDay === d ? 'btn-day active' : 'btn-day'} 
+              onClick={() => setSelectedDay(d)}
             >
-              <option value="" disabled>Archive...</option>
-              {olderDays.map(dayStr => (
-                <option key={dayStr} value={dayStr}>{format(parseISO(dayStr), 'dd.MM.yyyy')}</option>
-              ))}
+              {i === 0 ? 'Heute' : format(parseISO(d), 'eeee', { locale: de })}
+            </button>
+          ))}
+          {days.length > 3 && (
+            <select className="btn-day" value={selectedDay || ''} onChange={(e) => setSelectedDay(e.target.value || null)}>
+              <option value="" disabled>Archiv...</option>
+              {days.slice(3).map(d => <option key={d} value={d}>{format(parseISO(d), 'dd.MM.yyyy')}</option>)}
               <option value="">Alle anzeigen</option>
             </select>
           )}
@@ -68,11 +52,7 @@ export default function HomeClient({ initialSummaries }) {
       </div>
 
       <section className="summaries-grid">
-        {filtered.length > 0 ? (
-          filtered.map(item => <SummaryCard key={item.id} item={item} />)
-        ) : (
-          <div className="empty-state"><p>Keine Einträge gefunden.</p></div>
-        )}
+        {filtered.map(item => <SummaryCard key={item.id} item={item} />)}
       </section>
     </main>
   );
