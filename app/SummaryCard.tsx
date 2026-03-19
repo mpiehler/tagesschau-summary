@@ -11,16 +11,15 @@ function SimpleMarkdown({ text }: { text: string }) {
   const lines = html.split('\n');
   const renderedLines = lines.map((line, i) => {
     const trimmed = line.trim();
-    if (trimmed.startsWith('* ')) return <li key={i} dangerouslySetInnerHTML={{ __html: trimmed.substring(2) }} style={{marginLeft: '20px', marginBottom: '8px', listStyleType: 'disc'}} />;
-    if (trimmed === '') return <div key={i} style={{height: '10px'}} />;
-    return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed }} style={{marginBottom: '10px'}} />;
+    if (trimmed.startsWith('* ')) return <li key={i} dangerouslySetInnerHTML={{ __html: trimmed.substring(2) }} style={{ marginLeft: '20px', marginBottom: '8px', listStyleType: 'disc' }} />;
+    if (trimmed === '') return <div key={i} style={{ height: '10px' }} />;
+    return <p key={i} dangerouslySetInnerHTML={{ __html: trimmed }} style={{ marginBottom: '10px' }} />;
   });
   return <div className="markdown-content">{renderedLines}</div>;
 }
 
 export default function SummaryCard({ item }: { item: Summary }) {
   const [activeTab, setActiveTab] = useState<'summary' | 'visual' | 'verbatim'>('summary');
-
   const parseSections = (text: string) => {
     const rawText = (text || '').replace(/\r\n/g, '\n');
     const normalizedText = '\n' + rawText;
@@ -40,10 +39,8 @@ export default function SummaryCard({ item }: { item: Summary }) {
     if (!parsed.summary && chunks[0]) parsed.summary = chunks[0].trim().split('\n').slice(1).join('\n').trim();
     return parsed;
   };
-
   const sections = parseSections(item.summary);
   const activeContent = activeTab === 'summary' ? (sections.summary || item.summary) : activeTab === 'visual' ? (sections.visual || 'Nicht verfügbar.') : (sections.verbatim || 'Nicht verfügbar.');
-
   return (
     <article className="summary-card">
       <div className="card-header">
