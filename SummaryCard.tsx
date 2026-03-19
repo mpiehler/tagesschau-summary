@@ -3,13 +3,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
-import dynamic from 'next/dynamic';
-
-// Dynamic import for react-markdown to avoid SSR issues with ESM-only package
-const ReactMarkdown = dynamic(() => import('react-markdown'), { 
-  ssr: false,
-  loading: () => <p className="loading-text">Lädt Text...</p>
-});
 
 interface Summary {
   id: string;
@@ -19,16 +12,12 @@ interface Summary {
   published_at: string;
 }
 
-type TabType = 'summary' | 'visual' | 'verbatim';
-
 export default function SummaryCard({ item }: { item: Summary }) {
-  const [activeTab, setActiveTab] = useState<TabType>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'visual' | 'verbatim'>('summary');
 
-  // Robust chunk-based parser
-  const sections = (() => {
-    const text = item.summary || '';
-    const normalizedText = '\n' + text;
-    // Split by newline followed by any markdown header (#)
+  // Dieser Teil sortiert den Text in die richtigen Tabs
+  const parseSections = (text: string) => {
+    const normalizedText = '\n' + (text || '');
     const chunks = normalizedText.split(/\n(?=#{1,6}\s)/).filter(c => c.trim() !== '');
 
     const findContent = (keywords: string[]) => {
@@ -47,49 +36,39 @@ export default function SummaryCard({ item }: { item: Summary }) {
       visual: findContent(['visuell', 'bild', 'visual']) || 'Visuelle Beschreibung nicht verfügbar.',
       verbatim: findContent(['transkript', 'wörtlich', 'verbatim', 'text', 'sprecher']) || 'Transkript nicht verfügbar.',
     };
-  })();
+  };
 
-  const activeContent = activeTab === 'summary' 
-    ? sections.summary 
-    : activeTab === 'visual' 
-    ? sections.visual 
-    : sections.verbatim;
+  const sections = parseSections(item.summary);
+  const activeContent = activeTab === 'summary' ? sections.summary : activeTab === 'visual' ? sections.visual : sections.verbatim;
 
-  // Safe date parsing
   let displayDate = new Date();
   if (item.published_at) {
-    try {
-      displayDate = parseISO(item.published_at);
-    } catch (e) {
-      console.error("Date error:", e);
-    }
+    try { displayDate = parseISO(item.published_at); } catch (e) { }
   }
 
   return (
-    <article className="summary-card animation-fade-in">
+    <article className="summary-card">
       <div className="card-header">
         <h2>{item.title}</h2>
-        <time dateTime={item.published_at}>
-          {format(displayDate, 'PPPP', { locale: de })}
-        </time>
+        <time>{format(displayDate, 'PPPP', { locale: de })}</time>
       </div>
 
       <div className="tabs-container">
         <div className="tabs">
-          <button 
-            className={activeTab === 'summary' ? 'tab active transition' : 'tab transition'} 
+          <button
+            className={activeTab === 'summary' ? 'tab active transition' : 'tab transition'}
             onClick={() => setActiveTab('summary')}
           >
             Themen
           </button>
-          <button 
-            className={activeTab === 'visual' ? 'tab active transition' : 'tab transition'} 
+          <button
+            className={activeTab === 'visual' ? 'tab active transition' : 'tab transition'}
             onClick={() => setActiveTab('visual')}
           >
             Visuelles
           </button>
-          <button 
-            className={activeTab === 'verbatim' ? 'tab active transition' : 'tab transition'} 
+          <button
+            className={activeTab === 'verbatim' ? 'tab active transition' : 'tab transition'}
             onClick={() => setActiveTab('verbatim')}
           >
             Transkript
@@ -98,19 +77,19 @@ export default function SummaryCard({ item }: { item: Summary }) {
       </div>
 
       <div className="card-content">
-        <div className="markdown-body">
-          <ReactMarkdown>{activeContent}</ReactMarkdown>
+        <div className="markdown-body" style={{ whiteSpace: 'pre-wrap', fontSize: '1.1rem', minHeight: '200px' }}>
+          {activeContent}
         </div>
       </div>
 
       <div className="card-footer">
-        <a 
-          href={`https://www.youtube.com/watch?v=${item.video_id}`} 
-          target="_blank" 
+        <a
+          href={`https://www.youtube.com/watch?v=${item.video_id}`}
+          target="_blank"
           rel="noopener noreferrer"
           className="btn-link"
         >
-          Auf YouTube ansehen
+          Original Video ansehen
         </a>
       </div>
     </article>
