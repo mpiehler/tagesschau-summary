@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import SummaryCard from './SummaryCard';
 
-export const revalidate = 60; // Revalidate every minute
+export const revalidate = 1; // Revalidate every minute
 
 export default async function Home() {
   const { data: summaries, error } = await supabase
