@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
-import ReactMarkdown from 'react-markdown';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for react-markdown to avoid SSR issues with ESM-only package
+const ReactMarkdown = dynamic(() => import('react-markdown'), { 
+  ssr: false,
+  loading: () => <p className="loading-text">Lädt Text...</p>
+});
 
 interface Summary {
   id: string;
@@ -20,14 +26,16 @@ export default function SummaryCard({ item }: { item: Summary }) {
 
   // Robust chunk-based parser
   const sections = (() => {
-    const normalizedText = '\n' + (item.summary || '');
+    const text = item.summary || '';
+    const normalizedText = '\n' + text;
+    // Split by newline followed by any markdown header (#)
     const chunks = normalizedText.split(/\n(?=#{1,6}\s)/).filter(c => c.trim() !== '');
 
     const findContent = (keywords: string[]) => {
       for (const chunk of chunks) {
-        const firstLine = chunk.trim().split('\n')[0].toLowerCase();
+        const lines = chunk.trim().split('\n');
+        const firstLine = lines[0].toLowerCase();
         if (keywords.some(k => firstLine.includes(k.toLowerCase()))) {
-          const lines = chunk.trim().split('\n');
           return lines.slice(1).join('\n').trim();
         }
       }
@@ -53,7 +61,7 @@ export default function SummaryCard({ item }: { item: Summary }) {
     try {
       displayDate = parseISO(item.published_at);
     } catch (e) {
-      console.error(e);
+      console.error("Date error:", e);
     }
   }
 
